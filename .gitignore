@@ -1,0 +1,55 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Jupyter/IPython cache
+.ipynb_checkpoints/
+
+# Logs and temporary files
+*.log
+*.tmp
+*.bak
+*.swp
+
+# Byte-compiled / distribution files
+*.egg-info/
+*.egg
+*.manifest
+*.spec
+*.lock
+*.env
+*.venv
+venv/
+env/
+ENV/
+
+# IDE/editor settings
+.vscode/
+.idea/
+.DS_Store
+
+# Model artifacts
+*.safetensors
+*.pt
+*.bin
+*.h5
+
+# Data files (raw and generated)
+*.gpickle
+*.jsonl
+*.pkl
+*.faiss
+*.RRF
+*.owl
+*.conll
+
+# SapBERT weights (only README is kept)
+drug_ae_reasoner/local_models/sapbert/*
+!drug_ae_reasoner/local_models/sapbert/README.md
+
+# Raw and intermediate data
+drug_ae_reasoner/data/cadec/*
+drug_ae_reasoner/data/oae/*
+drug_ae_reasoner/data/rxnorm/*
+drug_ae_reasoner/data/processed/*

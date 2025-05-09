@@ -1,0 +1,18 @@
+# Ensure all text files use LF (Linux-style) endings in the repository
+* text=auto eol=lf
+
+# Explicitly declare types (optional but precise)
+*.py text
+*.md text
+*.txt text
+*.json text
+*.gitignore text
+*.gitattributes text
+
+# Binary files should not be modified
+*.faiss binary
+*.pkl binary
+*.gpickle binary
+*.RRF binary
+*.owl binary
+*.safetensors binary
