@@ -53,3 +53,4 @@ drug_ae_reasoner/data/cadec/*
 drug_ae_reasoner/data/oae/*
 drug_ae_reasoner/data/rxnorm/*
 drug_ae_reasoner/data/processed/*
+*.zip

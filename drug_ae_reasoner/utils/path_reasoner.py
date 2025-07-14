@@ -34,11 +34,21 @@ def rank_drug_ae_paths(raw_paths, cadec_ae_oae_dict, oae_input_list, n_paths=5):
     scored = []
     for drug_label, inp_label, path_nodes in raw_paths:
         oae_cand = path_nodes[0]
-        oae_in = path_nodes[-1]
-        sim1 = cadec_sim.get((path_nodes[0], oae_cand), 0.0)
+        oae_in   = path_nodes[-1]
+
+        # Find the CADEC AE label corresponding to oae_cand
+        ae_label = next(
+            (ae for ae, oae_list in cadec_ae_oae_dict.items() if any(oae_node == oae_cand for oae_node, _ in oae_list)),
+            None
+        )
+        # Calculate similarities, defaulting to 0.0 if not found
+        sim1 = 0.0
+        if ae_label:
+            sim1 = cadec_sim.get((ae_label, oae_cand), 0.0)
         sim2 = input_sim.get((inp_label, oae_in), 0.0)
         score = sim1 + sim2
         scored.append((drug_label, inp_label, path_nodes, score))
+
     scored.sort(key=lambda x: x[3], reverse=True)
     return scored[:n_paths]
 

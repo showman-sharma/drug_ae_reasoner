@@ -11,14 +11,18 @@ def verbalize_drug_to_input_ae_paths(drug_input: str,
     narratives = []
     for drug_lbl, inp_lbl, path, score in top_paths:
         if len(path) < 2:
-            ae_cadec = next((ae for ae, lst in cadec_ae_oae_dict.items() if any(o == path[0] for o, _ in lst)),"__fallback_ae__")
+            ae_cadec = next(
+                (ae for ae, lst in cadec_ae_oae_dict.items() if any(o == path[0] for o, _ in lst)), 
+                "__fallback_ae__"
+            )
             cui_str = cui_map.get(ae_cadec, "N/A")
-            
+            # Safely get similarity (default 0.0 if not found to avoid KeyError)
+            sim_val = cadec_sim.get((ae_cadec, path[0]), 0.0)
             sim_to_input = input_sim.get((inp_lbl, path[0]), 0.0)
             narratives.append("; ".join([
                 f"{drug_input} normalizes_to CADEC_drug {drug_lbl} via CUI(s)({cui_str})",
                 f"{drug_lbl} causes {ae_cadec}",
-                f"{ae_cadec} is_similar_to {path[0]} (sim={cadec_sim[(ae_cadec, path[0])]:.2f})",
+                f"{ae_cadec} is_similar_to {path[0]} (sim={sim_val:.2f})",
                 f"{path[0]} is_similar_to {inp_lbl} (sim={sim_to_input:.2f})",
                 f"# total path score = {score:.2f}"
             ]))
