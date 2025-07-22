@@ -18,10 +18,14 @@ def build_cadec_ae_oae_mapping(
     cadec_ae_threshold: float = 0.7
 ) -> Dict[str, List[Tuple[str, float]]]:
     """
-    Batch‐encode all CADEC AE labels, perform a single FAISS search,
-    and then split the results back out per AE.
+    For each CADEC AE label, returns up to `n_cadec` similar OAE concepts
+    whose similarity ≥ `cadec_ae_threshold`. Batch-encodes all labels in one go.
     """
-    # 1) Batch‐encode & normalize
+    # Guard against empty input
+    if not ae_cadec_list:
+        return {}
+
+    # 1) Batch-encode & normalize
     raw_vecs = model.encode(
         ae_cadec_list,
         convert_to_tensor=False,
@@ -30,11 +34,11 @@ def build_cadec_ae_oae_mapping(
     # 2) Build a (N × D) float32 matrix
     queries = np.vstack([vec.astype("float32") for vec in raw_vecs])
 
-    # 3) FAISS inner‐product search
+    # 3) FAISS inner-product search
     distances, indices = _INDEX.search(queries, n_cadec)
     mapping: Dict[str, List[Tuple[str, float]]] = {}
 
-    # 4) Convert to cosine‐similarities & filter
+    # 4) Convert to cosine-similarities & filter
     for ae_label, dists, idxs in zip(ae_cadec_list, distances, indices):
         sims = 1.0 - dists / 2.0
         hits = [
@@ -53,17 +57,26 @@ def build_input_ae_oae_list(
     input_ae_threshold: float = 0.7
 ) -> List[Tuple[str, str, float]]:
     """
-    Batch‐encode all input AEs, perform FAISS search in one go,
-    and gather the top neighbors per input AE.
+    For each input AE text, returns up to `n_input` OAE concepts
+    (excluding identity) with similarity ≥ `input_ae_threshold`.
+    Batch-encodes all inputs in one go.
     """
+    # Guard against empty input
+    if not ae_input_list:
+        return []
+
+    # 1) Batch-encode & normalize
     raw_vecs = model.encode(
         ae_input_list,
         convert_to_tensor=False,
         normalize_embeddings=True
     )
     queries = np.vstack([vec.astype("float32") for vec in raw_vecs])
+
+    # 2) FAISS search
     distances, indices = _INDEX.search(queries, n_input + 1)
 
+    # 3) Collect neighbors per input AE
     oae_input_list: List[Tuple[str, str, float]] = []
     for inp_label, dists, idxs in zip(ae_input_list, distances, indices):
         sims = 1.0 - dists / 2.0
