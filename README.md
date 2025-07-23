@@ -108,8 +108,14 @@ This will:
 You can also use the system directly in Python:
 
 ```python
-from drug_ae_reasoner.reasoning import find_top_drug_to_input_ae_paths
-from drug_ae_reasoner.config import RX_PATH, CADEC_KG_PATH, OAE_INDEX_PATH, OAE_LABEL_MAP_PATH, OAE_GRAPH_PATH
+from drug_ae_reasoner.utils.path_reasoner import find_top_drug_to_input_ae_paths
+from drug_ae_reasoner.config import (
+    RX_PATH,
+    CADEC_KG_PATH,
+    OAE_INDEX_PATH,
+    OAE_LABEL_MAP_PATH,
+    OAE_GRAPH_PATH,
+)
 
 connected, top_paths, fb_drug, fb_ae, verb = find_top_drug_to_input_ae_paths(
     drug="metformin",
@@ -124,10 +130,11 @@ connected, top_paths, fb_drug, fb_ae, verb = find_top_drug_to_input_ae_paths(
     n_input=5,
     input_ae_threshold=0.7,
     n_paths=5,
-    n_disconnect=3
+    n_disconnect=3,
 )
 
 print("\n".join(verb))
+
 ```
 
 ---
