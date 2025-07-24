@@ -110,59 +110,67 @@ def generate_fallback_drug_paths(
     n_disconnect: int = 3
 ) -> List[Tuple[str, str, List[str], float]]:
     """
-    If no paths found, pick the top n_disconnect CADEC→OAE edges by similarity
-    as fallback.
+    Fallback: If no direct path found, return top-N AEs most strongly associated
+    with the given drug (based on CADEC pairs + OAE similarity).
     """
-    edges = [
-        (ae_c, oae, sim)
-        for ae_c, neigh in cadec_ae_oae_dict.items()
-        for oae, sim in neigh
-    ]
-    edges.sort(key=lambda x: x[2], reverse=True)
-
     fallback = []
-    for ae_c, oae, sim in edges[:n_disconnect]:
-        fallback_label = f"__fallback_ae__::{oae}"
-        fallback.append((drug_label, fallback_label, [oae], sim))
+    # Filter CADEC AEs caused by this drug
+    ae_candidates = [(ae, score) for d, ae, score in cadec_pairs if d == drug_label]
+    ae_candidates.sort(key=lambda x: x[1], reverse=True)
+
+    for ae, drug_score in ae_candidates[:n_disconnect]:
+        if ae in cadec_ae_oae_dict:
+            # Take top-scoring OAE mapping for this AE
+            oae, sim = max(cadec_ae_oae_dict[ae], key=lambda x: x[1])
+            total_score = (drug_score + sim) / 2.0
+            fallback.append((drug_label, ae, [oae], total_score))
+
     return fallback
 
 
-def generate_fallback_ae_paths(
-    ae_input_list: List[str],
+
+def generate_fallback_ae_paths(ae_input_list: List[str],
     cadec_pairs: List[Tuple[str, str, float]],
     cadec_ae_oae_dict: Dict[str, List[Tuple[str, float]]],
     oae_input_list: List[Tuple[str, str, float]],
     n_disconnect: int = 3
 ) -> List[Tuple[str, str, List[str], float]]:
     """
-    Fallback when CADEC AE→OAE map or drug mapping fails: pick top input→OAE edges.
+    Fallback: If no direct path from drug to AE, return top drugs that cause CADEC AEs
+    semantically similar to the input AE.
     """
-    # Reverse map: OAE → list of (CADEC AE, sim)
-    rev: DefaultDict[str, List[Tuple[str, float]]] = defaultdict(list)
-    for ca, neigh in cadec_ae_oae_dict.items():
-        for oae, s in neigh:
-            rev[oae].append((ca, s))
-
     fallback = []
-    # For each input AE, get its top OAE neighbors
-    for inp_ae in ae_input_list:
+
+    # Reverse index: OAE → CADEC AE
+    oae_to_cadec: DefaultDict[str, List[Tuple[str, float]]] = defaultdict(list)
+    for cae, lst in cadec_ae_oae_dict.items():
+        for oae, sim in lst:
+            oae_to_cadec[oae].append((cae, sim))
+
+    for ae_input in ae_input_list:
+        # Get top OAE nodes for this input AE
         neighbors = [
-            (i, o, s) for i, o, s in oae_input_list if i == inp_ae
+            (inp, oae, sim) for inp, oae, sim in oae_input_list if inp == ae_input
         ]
         neighbors.sort(key=lambda x: x[2], reverse=True)
 
-        for _, oae, sim_inp in neighbors[:n_disconnect]:
-            candidates = rev.get(oae, [])
-            if candidates:
-                cae, _ = max(candidates, key=lambda x: x[1])
-                parents = [d for d, ae, _ in cadec_pairs if ae == cae]
-                drug2 = parents[0] if parents else "__no_drug2__"
-            else:
-                cae, drug2 = "__no_cadec__", "__no_drug2__"
-            fallback.append((drug2, inp_ae, [oae], sim_inp))
+        for _, oae_node, sim_input in neighbors[:n_disconnect]:
+            candidates = oae_to_cadec.get(oae_node, [])
+            if not candidates:
+                continue
+
+            # Pick the most similar CADEC AE and its causing drug
+            cadec_ae, sim_cadec = max(candidates, key=lambda x: x[1])
+            parent_drugs = [(d, s) for d, ae, s in cadec_pairs if ae == cadec_ae]
+            if not parent_drugs:
+                continue
+
+            drug, drug_score = max(parent_drugs, key=lambda x: x[1])
+            total_score = (sim_input + sim_cadec + drug_score) / 3.0
+            fallback.append((drug, ae_input, [oae_node], total_score))
+
     return fallback
-
-
+    
 def find_top_drug_to_input_ae_paths(
     drug: str,
     ae_input_list: List[str],
