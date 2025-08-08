@@ -6,7 +6,7 @@ from typing import List, Tuple, Dict
 from .similarity_search import build_input_ae_oae_list, build_cadec_ae_oae_mapping
 from ..data.cadec_loader import get_cadec_ae_pairs, get_cadec_drug_nodes
 from .verbalizer import verbalize_drug_to_input_ae_paths
-from ..config import OAE_GRAPH_PATH
+from ..config import OAE_GRAPH_PATH,  RX_PATH
 
 # ─── Simple in-proc cache for loaded OAE graph ──────────────────────────
 _GRAPH_CACHE: Dict[str, nx.MultiDiGraph] = {}
@@ -173,7 +173,7 @@ def find_top_drug_to_input_ae_paths(
       4) OAE graph 0/1-hop paths, ranking, fallback, verbalization
     """
     # 1) CADEC drug nodes & pairs
-    drug_nodes = get_cadec_drug_nodes(drug, cadec_kg_path)
+    drug_nodes = get_cadec_drug_nodes(drug, cadec_kg_path, RX_PATH)
     cadec_pairs = get_cadec_ae_pairs(drug_nodes, cadec_kg_path)
     ae_cadec_list = sorted({ae for _, ae, _ in cadec_pairs})
 
