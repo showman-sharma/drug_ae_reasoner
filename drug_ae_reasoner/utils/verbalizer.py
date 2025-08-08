@@ -1,95 +1,65 @@
-from typing import List, Tuple, Dict
+# drug_ae_reasoner/utils/verbalizer.py
+from typing import List, Tuple, Dict, DefaultDict
+from collections import defaultdict
 
 def verbalize_drug_to_input_ae_paths(
     drug_input: str,
-    cadec_pairs: List[Tuple[str, str, str]],
+    cadec_pairs: List[Tuple[str, str, str]],  # (drug_label, cadec_ae, cui_str)
     cadec_ae_oae_dict: Dict[str, List[Tuple[str, float]]],
-    oae_input_list: List[Tuple[str, str, float]],
-    top_paths: List[Tuple[str, str, List[str], float]]
+    oae_input_list: List[Tuple[str, str, float]],  # (input_ae, oae, sim)
+    top_paths: List[Tuple[str, str, List[str], float]]  # (drug_label, input_ae, [oae...], score)
 ) -> List[str]:
     """
-    Build human-readable explanations for each path:
-      - drug_input: the original drug string
-      - cadec_pairs: list of (node_id, ae_label, cui_str)
-      - cadec_ae_oae_dict: CADEC-AE → [(OAE, sim), ...]
-      - oae_input_list: input-AE → [(OAE, sim), ...]
-      - top_paths: list of (drug_node, input_ae, path_nodes, score)
+    Build human-readable explanations for each path, e.g.:
+    DRUG (CUIs: ...) -> CADEC_AE -> OAE_x -> ... -> OAE_y ~ similar to INPUT_AE
     """
-    # Map CADEC AE → its CUI string
-    cui_map = {ae: cui for _, ae, cui in cadec_pairs}
+    # AE -> CUI-strings (collected from all drug pairs)
+    cui_map: DefaultDict[str, str] = defaultdict(str)
+    for d, ae, cui_str in cadec_pairs:
+        if cui_str and not cui_map[ae]:
+            cui_map[ae] = cui_str
 
-    # Similarities: (CADEC AE, OAE) and (input AE, OAE)
-    cadec_sim = {
-        (ae, oae): sim
-        for ae, lst in cadec_ae_oae_dict.items()
-        for oae, sim in lst
-    }
-    input_sim = {
-        (inp, oae): sim
-        for inp, oae, sim in oae_input_list
-    }
+    # convenience lookups
+    cadec_sim = {(ae, oae): sim for ae, lst in cadec_ae_oae_dict.items() for oae, sim in lst}
+    input_sim = {(inp, oae): sim for inp, oae, sim in oae_input_list}
 
-    narratives: List[str] = []
-
-    for drug_lbl, inp_lbl, path, score in top_paths:
-        # ── direct (0-hop) paths or fallbacks ─────────────────────────────
-        if len(path) < 2:
-            # find the CADEC-AE label that maps to this OAE, or mark fallback
-            ae_cadec = next(
-                (
-                    ae
-                    for ae, lst in cadec_ae_oae_dict.items()
-                    if any(o == path[0] for o, _ in lst)
-                ),
-                "__fallback_ae__"
-            )
-            cui_str = cui_map.get(ae_cadec, "N/A")
-
-            # safely get similarities (defaults to 0.0)
-            sim_val = cadec_sim.get((ae_cadec, path[0]), 0.0)
-            sim_to_input = input_sim.get((inp_lbl, path[0]), 0.0)
-
-            narratives.append("; ".join([
-                f"{drug_input} normalizes_to CADEC_drug {drug_lbl} via CUI(s)({cui_str})",
-                f"{drug_lbl} causes {ae_cadec}",
-                f"{ae_cadec} is_similar_to {path[0]} (sim={sim_val:.2f})",
-                f"{path[0]} is_similar_to {inp_lbl} (sim={sim_to_input:.2f})",
+    narr: List[str] = []
+    for drug_lbl, inp_lbl, path_nodes, score in top_paths:
+        # Direct 0-hop path in OAE
+        if len(path_nodes) == 1:
+            oae = path_nodes[0]
+            sim2 = input_sim.get((inp_lbl, oae), 0.0)
+            lines = [
+                f"{drug_lbl} possibly causes an AE mapped to {oae} (OAE);",
+                f"{oae} is similar to input '{inp_lbl}' (sim={sim2:.2f});",
                 f"# total path score = {score:.2f}"
-            ]))
+            ]
+            narr.append(" ".join(lines))
             continue
 
-        # ── 1-hop+ paths ───────────────────────────────────────────────────
-        oae_from, oae_to = path[0], path[-1]
-        middle = path[1:-1]
+        # 1-hop path (or more if you extend later)
+        oae_from, oae_to = path_nodes[0], path_nodes[-1]
+        middle = path_nodes[1:-1]
 
-        # CADEC-AE label mapping
-        ae_cadec = next(
-            ae
-            for ae, lst in cadec_ae_oae_dict.items()
-            if any(o == oae_from for o, _ in lst)
-        )
-        cui_str = cui_map.get(ae_cadec, "N/A")
+        # try to recover the CADEC-AE label that mapped to oae_from (best effort)
+        ae_cadec = None
+        for ae, lst in cadec_ae_oae_dict.items():
+            if any(o == oae_from for o, _ in lst):
+                ae_cadec = ae
+                break
 
-        sim1 = cadec_sim.get((ae_cadec, oae_from), 0.0)
+        sim1 = cadec_sim.get((ae_cadec, oae_from), 0.0) if ae_cadec else 0.0
         sim2 = input_sim.get((inp_lbl, oae_to), 0.0)
+        cui_str = cui_map.get(ae_cadec or "", "N/A")
 
-        # build the narrative lines
-        lines = [
-            f"{drug_input} normalizes_to CADEC_drug {drug_lbl} via CUI(s)({cui_str})",
-            f"{drug_lbl} causes {ae_cadec}",
-            f"{ae_cadec} is_similar_to {oae_from} (sim={sim1:.2f})"
-        ]
-
-        prev = oae_from
-        for nxt in (*middle, oae_to):
-            lines.append(f"{prev} relates_to {nxt} (in OAE)")
-            prev = nxt
-
+        lines = [f"{drug_lbl} (CUIs: {cui_str}) → {ae_cadec or 'unknown AE'}"]
+        if middle:
+            for n in middle:
+                lines.append(f"→ {n} (OAE)")
         lines.extend([
-            f"{oae_to} is_similar_to {inp_lbl} (sim={sim2:.2f})",
-            f"# total path score = {score:.2f}"
+            f"→ {oae_to} (OAE) ~ '{inp_lbl}'",
+            f"[sim(cadec→oae_from)={sim1:.2f}; sim(oae_to→input)={sim2:.2f}; score={score:.2f}]"
         ])
+        narr.append(" ".join(lines))
 
-        narratives.append("; ".join(lines))
-
-    return narratives
+    return narr
