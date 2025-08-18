@@ -97,8 +97,9 @@ def generate_fallback_drug_paths(
     If no direct path found, propose top-N CADEC AEs for the drug.
     Score = (1.0 + best OAE sim) / 2 (use 1.0 as presence weight).
     """
-    # collect CADEC AEs for this drug
-    ae_cands = [ae for d, ae, _ in cadec_pairs if d == drug_label]
+    # collect CADEC AEs for this drug (case-insensitive)
+    drug_label_l = drug_label.lower()
+    ae_cands = [ae for d, ae, _ in cadec_pairs if d.lower() == drug_label_l]
     fallback: List[Tuple[str, str, List[str], float]] = []
     # keep unique AEs ordered by appearance
     seen = set()
