@@ -8,7 +8,7 @@
 
 `drug_ae_reasoner` is a Python package that connects **drug mentions** to **user-reported adverse effects (AEs)** through a multi-source reasoning pipeline involving:
 
-* RxNorm-based normalization of drug names
+* RxNorm-based normalization of drug names with SapBERT MEL fallback
 * CADEC forum-based adverse effect knowledge graph
 * OAE ontology graph & SapBERT semantic mapping
 * Path discovery and verbalization from CADEC→OAE→Input AEs

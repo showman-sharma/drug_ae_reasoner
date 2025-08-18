@@ -19,6 +19,9 @@ import logging
 from typing import Any, List, Tuple, Set, Dict
 
 import networkx as nx
+import numpy as np
+
+from ..utils.encoding import encode_text
 
 # Pull defaults from project config, but keep functions parametric so callers can override.
 from ..config import CADEC_KG_PATH as _DEFAULT_CADEC_KG
@@ -30,6 +33,8 @@ logger = logging.getLogger(__name__)
 # Graph cache
 # ──────────────────────────────────────────────────────────────────────────────
 _CADEC_KG_CACHE: Dict[str, nx.MultiDiGraph] = {}
+# Cache for precomputed drug label embeddings per KG path
+_DRUG_EMB_CACHE: Dict[str, List[Tuple[str, str, Set[str], np.ndarray]]] = {}
 
 
 def _load_cadec_graph(kg_path: str | None = None) -> nx.MultiDiGraph:
@@ -104,6 +109,8 @@ def get_cadec_drug_nodes(
     drug_label: str,
     kg_path: str | None = None,
     rxn_rrf_path: str | None = None,
+    mel_top_k: int = 5,
+    mel_threshold: float = 0.7,
 ) -> List[Tuple[str, str, Set[str]]]:
     """
     Find CADEC *drug* nodes matching the input query.
@@ -133,7 +140,7 @@ def get_cadec_drug_nodes(
             logger.debug("[CADEC] %d drug node(s) matched by RxNorm CUI for query '%s'", len(hits), drug_label)
             return hits
 
-    # Pass 2: label normalization fallback
+    # Pass 2: label normalization
     q_norm = _norm(drug_label)
     for node, data in G.nodes(data=True):
         if data.get("type") != "drug":
@@ -142,9 +149,31 @@ def get_cadec_drug_nodes(
         lbl_norm = _norm(lbl)
         if lbl_norm == q_norm or q_norm in lbl_norm:
             hits.append((node, lbl.lower(), set(data.get("cuis", []))))
+    if hits:
+        return hits
+
+    # Pass 3: MEL embedding similarity search (SapBERT)
+    if kg_path not in _DRUG_EMB_CACHE:
+        emb_list: List[Tuple[str, str, Set[str], np.ndarray]] = []
+        for node, data in G.nodes(data=True):
+            if data.get("type") != "drug":
+                continue
+            lbl = (data.get("label") or "")
+            emb_list.append((node, lbl.lower(), set(data.get("cuis", [])), encode_text(lbl)))
+        _DRUG_EMB_CACHE[kg_path] = emb_list
+
+    q_vec = encode_text(drug_label)
+    sims = [float(np.dot(q_vec, emb)) for _, _, _, emb in _DRUG_EMB_CACHE[kg_path]]
+    ordered = sorted(zip(_DRUG_EMB_CACHE[kg_path], sims), key=lambda x: x[1], reverse=True)
+    for (node, lbl, cuis, _), sim in ordered[:mel_top_k]:
+        if sim >= mel_threshold:
+            hits.append((node, lbl, cuis))
 
     if not hits:
-        logger.warning("[CADEC] No drug nodes found for label='%s' (CUI+label matching).", drug_label)
+        logger.warning(
+            "[CADEC] No drug nodes found for label='%s' (CUI+label+embedding).",
+            drug_label,
+        )
     return hits
 
 
