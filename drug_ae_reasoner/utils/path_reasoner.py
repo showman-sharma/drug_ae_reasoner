@@ -173,7 +173,11 @@ def find_top_drug_to_input_ae_paths(
       4) OAE graph 0/1-hop paths, ranking, fallback, verbalization
     """
     # 1) CADEC drug nodes & pairs
-    drug_nodes = get_cadec_drug_nodes(drug, cadec_kg_path, RX_PATH)
+    # Respect the caller-provided RxNorm path instead of always using the
+    # package-level default.  Previously this function ignored the `rx_path`
+    # argument and unconditionally used `RX_PATH`, making it impossible to run
+    # against alternative RxNorm files (e.g., in tests or custom deployments).
+    drug_nodes = get_cadec_drug_nodes(drug, cadec_kg_path, rx_path)
     cadec_pairs = get_cadec_ae_pairs(drug_nodes, cadec_kg_path)
     ae_cadec_list = sorted({ae for _, ae, _ in cadec_pairs})
 
