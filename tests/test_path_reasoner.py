@@ -3,18 +3,23 @@ import sys
 import types
 from unittest.mock import patch
 
+# Stub out heavy modules to avoid network and large loads during import
+_dummy_sim = types.ModuleType('drug_ae_reasoner.utils.similarity_search')
+_dummy_sim.build_input_ae_oae_list = lambda *args, **kwargs: []
+_dummy_sim.build_cadec_ae_oae_mapping = lambda *args, **kwargs: {}
+sys.modules['drug_ae_reasoner.utils.similarity_search'] = _dummy_sim
+
+_dummy_enc = types.ModuleType('drug_ae_reasoner.utils.encoding')
+_dummy_enc.encode_text = lambda *args, **kwargs: [0.0]
+sys.modules['drug_ae_reasoner.utils.encoding'] = _dummy_enc
+
+# Ensure package root on path and import target module
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from drug_ae_reasoner.utils import path_reasoner
+
 
 def test_rx_path_forwarding():
-    # Stub out similarity_search module to avoid loading large FAISS index
-    dummy_sim = types.ModuleType('drug_ae_reasoner.utils.similarity_search')
-    dummy_sim.build_input_ae_oae_list = lambda *args, **kwargs: []
-    dummy_sim.build_cadec_ae_oae_mapping = lambda *args, **kwargs: {}
-    sys.modules['drug_ae_reasoner.utils.similarity_search'] = dummy_sim
-
-    # Ensure package root is on the path
-    sys.path.append(os.path.dirname(os.path.dirname(__file__)))
-    from drug_ae_reasoner.utils import path_reasoner
-
+    """find_top_drug_to_input_ae_paths should pass through the rx_path argument."""
     with patch('drug_ae_reasoner.utils.path_reasoner.get_cadec_drug_nodes') as mock_drug_nodes, \
          patch('drug_ae_reasoner.utils.path_reasoner.get_cadec_ae_pairs', return_value=[]), \
          patch('drug_ae_reasoner.utils.path_reasoner.find_drug_to_input_ae_paths', return_value=[]), \
@@ -38,3 +43,21 @@ def test_rx_path_forwarding():
             n_disconnect=3,
         )
     mock_drug_nodes.assert_called_once_with('aspirin', 'kg_path', 'custom_rx')
+
+
+def test_generate_fallback_drug_paths_case_insensitive():
+    """Mixed-case drug labels should match lowercase entries in cadec_pairs."""
+    cadec_pairs = [('metformin', 'nausea', 'ae1')]
+    cadec_ae_oae_dict = {'nausea': [('OAE:0001', 0.9)]}
+
+    res = path_reasoner.generate_fallback_drug_paths('Metformin', cadec_pairs, cadec_ae_oae_dict)
+    assert res and res[0][1] == 'nausea'
+
+
+def test_generate_fallback_drug_paths_unknown_drug():
+    """Unknown drugs should yield an empty fallback list."""
+    cadec_pairs = [('metformin', 'nausea', 'ae1')]
+    cadec_ae_oae_dict = {'nausea': [('OAE:0001', 0.9)]}
+
+    res = path_reasoner.generate_fallback_drug_paths('Ibuprofen', cadec_pairs, cadec_ae_oae_dict)
+    assert res == []
