@@ -48,6 +48,36 @@ def test_rx_path_forwarding():
     mock_drug_nodes.assert_called_once_with('aspirin', 'kg_path', 'custom_rx')
 
 
+def test_oae_path_forwarding():
+    """find_top_drug_to_input_ae_paths should pass index/label paths to similarity search."""
+    with patch('drug_ae_reasoner.utils.path_reasoner.build_cadec_ae_oae_mapping', return_value={}) as mock_cadec, \
+         patch('drug_ae_reasoner.utils.path_reasoner.build_input_ae_oae_list', return_value=[]) as mock_input, \
+         patch('drug_ae_reasoner.utils.path_reasoner.get_cadec_drug_nodes', return_value=[]), \
+         patch('drug_ae_reasoner.utils.path_reasoner.get_cadec_ae_pairs', return_value=[]), \
+         patch('drug_ae_reasoner.utils.path_reasoner.find_drug_to_input_ae_paths', return_value=[]), \
+         patch('drug_ae_reasoner.utils.path_reasoner.rank_drug_ae_paths', return_value=[]), \
+         patch('drug_ae_reasoner.utils.path_reasoner.generate_fallback_drug_paths', return_value=[]), \
+         patch('drug_ae_reasoner.utils.path_reasoner.generate_fallback_ae_paths', return_value=[]), \
+         patch('drug_ae_reasoner.utils.path_reasoner.verbalize_drug_to_input_ae_paths', return_value=[]):
+        path_reasoner.find_top_drug_to_input_ae_paths(
+            drug='aspirin',
+            ae_input_list=[],
+            rx_path='custom_rx',
+            cadec_kg_path='kg_path',
+            oae_index_path='idx',
+            oae_label_map_path='lbl',
+            oae_graph_path='graph',
+            n_paths=5,
+            n_cadec=5,
+            n_input=5,
+            cadec_ae_threshold=0.7,
+            input_ae_threshold=0.7,
+            n_disconnect=3,
+        )
+    mock_cadec.assert_called_once_with([], n_cadec=5, cadec_ae_threshold=0.7, index_path='idx', label_map_path='lbl')
+    mock_input.assert_called_once_with([], n_input=5, input_ae_threshold=0.7, index_path='idx', label_map_path='lbl')
+
+
 def test_generate_fallback_drug_paths_case_insensitive():
     """Mixed-case drug labels should match lowercase entries in cadec_pairs."""
     cadec_pairs = [('metformin', 'nausea', 'ae1')]
