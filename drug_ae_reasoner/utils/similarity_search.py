@@ -2,7 +2,7 @@
 import pickle
 import numpy as np
 import faiss
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 
 from ..config import OAE_INDEX_PATH, OAE_LABEL_MAP_PATH
 from .encoding import model  # SentenceTransformer instance
@@ -12,17 +12,27 @@ _INDEX_CACHE: Dict[str, faiss.Index] = {}
 _LABEL_CACHE: Dict[str, List[str]] = {}
 
 
-def _get_index(index_path: str = OAE_INDEX_PATH) -> faiss.Index:
-    if index_path not in _INDEX_CACHE:
-        _INDEX_CACHE[index_path] = faiss.read_index(index_path)
-    return _INDEX_CACHE[index_path]
+def _get_index(index_path: Optional[str] = None) -> faiss.Index:
+    """Return a FAISS index, loading and caching by path on first use."""
+    path = index_path or OAE_INDEX_PATH
+    if path not in _INDEX_CACHE:
+        _INDEX_CACHE[path] = faiss.read_index(path)
+    return _INDEX_CACHE[path]
 
 
-def _get_labels(label_map_path: str = OAE_LABEL_MAP_PATH) -> List[str]:
-    if label_map_path not in _LABEL_CACHE:
-        with open(label_map_path, "rb") as f:
-            _LABEL_CACHE[label_map_path] = pickle.load(f)
-    return _LABEL_CACHE[label_map_path]
+def _get_labels(label_map_path: Optional[str] = None) -> List[str]:
+    """Return the OAE label map, loading and caching by path on first use."""
+    path = label_map_path or OAE_LABEL_MAP_PATH
+    if path not in _LABEL_CACHE:
+        with open(path, "rb") as f:
+            _LABEL_CACHE[path] = pickle.load(f)
+    return _LABEL_CACHE[path]
+
+
+def clear_similarity_caches() -> None:
+    """Clear cached FAISS indices and label maps (useful for tests)."""
+    _INDEX_CACHE.clear()
+    _LABEL_CACHE.clear()
 
 def _cos_from_sq_l2(d: np.ndarray) -> np.ndarray:
     # For unit-normalized vectors: cos(x,y) = 1 - 0.5 * ||x - y||^2
@@ -32,8 +42,8 @@ def build_cadec_ae_oae_mapping(
     ae_cadec_list: List[str],
     n_cadec: int = 5,
     cadec_ae_threshold: float = 0.7,
-    index_path: str = OAE_INDEX_PATH,
-    label_map_path: str = OAE_LABEL_MAP_PATH,
+    index_path: Optional[str] = None,
+    label_map_path: Optional[str] = None,
 ) -> Dict[str, List[Tuple[str, float]]]:
     """
     Map each CADEC AE label to up to n_cadec OAE concepts above the given threshold.
@@ -66,8 +76,8 @@ def build_input_ae_oae_list(
     ae_input_list: List[str],
     n_input: int = 5,
     input_ae_threshold: float = 0.7,
-    index_path: str = OAE_INDEX_PATH,
-    label_map_path: str = OAE_LABEL_MAP_PATH,
+    index_path: Optional[str] = None,
+    label_map_path: Optional[str] = None,
 ) -> List[Tuple[str, str, float]]:
     """
     For each input AE string, returns up to `n_input` OAE concepts

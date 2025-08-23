@@ -1,7 +1,7 @@
 # drug_ae_reasoner/utils/path_reasoner.py
 import pickle
 import networkx as nx
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 
 from .similarity_search import build_input_ae_oae_list, build_cadec_ae_oae_mapping
 from ..data.cadec_loader import get_cadec_ae_pairs, get_cadec_drug_nodes
@@ -161,8 +161,8 @@ def find_top_drug_to_input_ae_paths(
     ae_input_list: List[str],
     rx_path: str,
     cadec_kg_path: str,
-    oae_index_path: str = OAE_INDEX_PATH,
-    oae_label_map_path: str = OAE_LABEL_MAP_PATH,
+    oae_index_path: Optional[str] = OAE_INDEX_PATH,
+    oae_label_map_path: Optional[str] = OAE_LABEL_MAP_PATH,
     oae_graph_path: str = OAE_GRAPH_PATH,
     n_paths: int = 5,
     n_cadec: int = 5,
