@@ -54,4 +54,6 @@ drug_ae_reasoner/data/oae/*
 drug_ae_reasoner/data/rxnorm/*
 drug_ae_reasoner/data/processed/*
 adr_tac_kg_analysis.ipynb
+counter.py
+data/*
 *.zip
