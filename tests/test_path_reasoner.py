@@ -48,6 +48,41 @@ def test_rx_path_forwarding():
     mock_drug_nodes.assert_called_once_with('aspirin', 'kg_path', 'custom_rx')
 
 
+def test_oae_paths_forwarding():
+    """find_top_drug_to_input_ae_paths should pass through OAE resource paths."""
+    with patch('drug_ae_reasoner.utils.path_reasoner.build_cadec_ae_oae_mapping') as mock_cadec, \
+         patch('drug_ae_reasoner.utils.path_reasoner.build_input_ae_oae_list') as mock_input, \
+         patch('drug_ae_reasoner.utils.path_reasoner.get_cadec_drug_nodes'), \
+         patch('drug_ae_reasoner.utils.path_reasoner.get_cadec_ae_pairs', return_value=[]), \
+         patch('drug_ae_reasoner.utils.path_reasoner.find_drug_to_input_ae_paths', return_value=[]), \
+         patch('drug_ae_reasoner.utils.path_reasoner.rank_drug_ae_paths', return_value=[]), \
+         patch('drug_ae_reasoner.utils.path_reasoner.generate_fallback_drug_paths', return_value=[]), \
+         patch('drug_ae_reasoner.utils.path_reasoner.generate_fallback_ae_paths', return_value=[]), \
+         patch('drug_ae_reasoner.utils.path_reasoner.verbalize_drug_to_input_ae_paths', return_value=[]):
+        path_reasoner.find_top_drug_to_input_ae_paths(
+            drug='aspirin',
+            ae_input_list=['nausea'],
+            rx_path='rx',
+            cadec_kg_path='kg',
+            oae_index_path='idx_path',
+            oae_label_map_path='lbl_path',
+            oae_graph_path='graph',
+            n_paths=5,
+            n_cadec=5,
+            n_input=5,
+            cadec_ae_threshold=0.7,
+            input_ae_threshold=0.7,
+            n_disconnect=3,
+        )
+
+    kwargs_cadec = mock_cadec.call_args.kwargs
+    assert kwargs_cadec['index_path'] == 'idx_path'
+    assert kwargs_cadec['label_map_path'] == 'lbl_path'
+
+    kwargs_input = mock_input.call_args.kwargs
+    assert kwargs_input['index_path'] == 'idx_path'
+    assert kwargs_input['label_map_path'] == 'lbl_path'
+
 def test_generate_fallback_drug_paths_case_insensitive():
     """Mixed-case drug labels should match lowercase entries in cadec_pairs."""
     cadec_pairs = [('metformin', 'nausea', 'ae1')]
