@@ -42,7 +42,7 @@ def find_drug_to_input_ae_paths(
                 for oae_in in oae_inputs:
                     if oae_cand == oae_in:
                         paths.append((drug_label, inp_lbl, [oae_cand]))  # 0-hop
-                    elif G.has_edge(oae_cand, oae_in):
+                    elif G.has_edge(oae_cand, oae_in) or G.has_edge(oae_in, oae_cand):
                         paths.append((drug_label, inp_lbl, [oae_cand, oae_in]))  # 1-hop
     return paths
 
