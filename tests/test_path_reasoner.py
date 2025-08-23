@@ -80,6 +80,19 @@ def test_find_drug_to_input_ae_paths_zero_and_one_hop():
     assert ('drug', 'input', ['OAE:2', 'OAE:1']) in res  # 1-hop
 
 
+def test_find_drug_to_input_ae_paths_reversed_edge():
+    """Edges should be detected regardless of direction."""
+    G = nx.MultiDiGraph()
+    G.add_edge('OAE:1', 'OAE:2')  # reversed direction
+    with patch('drug_ae_reasoner.utils.path_reasoner._load_oae_graph', return_value=G):
+        res = path_reasoner.find_drug_to_input_ae_paths(
+            'drug',
+            {'ae2': [('OAE:2', 0.8)]},
+            [('input', 'OAE:1', 0.7)],
+        )
+    assert ('drug', 'input', ['OAE:2', 'OAE:1']) in res
+
+
 def test_rank_drug_ae_paths_scoring_and_dedup():
     """rank_drug_ae_paths should score paths and keep the highest per OAE route."""
     raw_paths = [
