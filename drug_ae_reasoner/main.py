@@ -16,6 +16,8 @@ def main():
     parser.add_argument("--n_cadec", type=int, default=5)
     parser.add_argument("--n_input", type=int, default=5)
     parser.add_argument("--n_disconnect", type=int, default=3)
+    parser.add_argument("--oae_index_path", type=str, default=OAE_INDEX_PATH, help="Path to OAE FAISS index")
+    parser.add_argument("--oae_label_map_path", type=str, default=OAE_LABEL_MAP_PATH, help="Path to OAE label map")
     args = parser.parse_args()
 
     print(f"[INFO] Running Drug-AE Path Reasoning for drug: {args.drug}")
@@ -26,8 +28,8 @@ def main():
         ae_input_list=args.aes,
         rx_path=RX_PATH,
         cadec_kg_path=CADEC_KG_PATH,
-        oae_index_path=OAE_INDEX_PATH,
-        oae_label_map_path=OAE_LABEL_MAP_PATH,
+        oae_index_path=args.oae_index_path,
+        oae_label_map_path=args.oae_label_map_path,
         oae_graph_path=OAE_GRAPH_PATH,
         n_paths=args.n_paths,
         n_cadec=args.n_cadec,

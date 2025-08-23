@@ -101,6 +101,12 @@ This will:
 * Rank based on semantic similarity
 * Print verbalized paths with similarity scores
 
+You can also override the default OAE resources, e.g.:
+
+```bash
+drug_ae_reasoner --drug metformin --aes nausea --oae_index_path path/to/index.faiss --oae_label_map_path path/to/labels.pkl
+```
+
 ---
 
 ## 📚 Python API Usage
