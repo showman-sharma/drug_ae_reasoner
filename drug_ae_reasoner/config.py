@@ -8,3 +8,7 @@ CADEC_KG_PATH = os.path.join(PACKAGE_DIR, "data", "cadec", "cadec_normalized_kg.
 OAE_INDEX_PATH = os.path.join(PACKAGE_DIR, "data", "oae", "oae_sapbert_index.faiss")
 OAE_LABEL_MAP_PATH = os.path.join(PACKAGE_DIR, "data", "oae", "oae_labels.pkl")
 OAE_GRAPH_PATH = os.path.join(PACKAGE_DIR, "data", "oae", "oae_graph.gpickle")  # ✅ Add this line
+
+# Embedding search controls
+ENABLE_EMBEDDING_SEARCH = True
+REQUIRE_EMBEDDING_CONFIRMATION = False
