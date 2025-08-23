@@ -7,10 +7,20 @@ from typing import List, Tuple, Dict
 from ..config import OAE_INDEX_PATH, OAE_LABEL_MAP_PATH
 from .encoding import model  # SentenceTransformer instance
 
-# ─── Preload FAISS index & OAE labels ───────────────────────────────────
-_INDEX = faiss.read_index(OAE_INDEX_PATH)
-with open(OAE_LABEL_MAP_PATH, "rb") as f:
-    _LABELS: List[str] = pickle.load(f)
+# ─── On-demand loading for FAISS index & labels (cache by path) ─────────
+_INDEX_CACHE: Dict[str, faiss.Index] = {}
+_LABELS_CACHE: Dict[str, List[str]] = {}
+
+def _load_index(path: str) -> faiss.Index:
+    if path not in _INDEX_CACHE:
+        _INDEX_CACHE[path] = faiss.read_index(path)
+    return _INDEX_CACHE[path]
+
+def _load_labels(path: str) -> List[str]:
+    if path not in _LABELS_CACHE:
+        with open(path, "rb") as f:
+            _LABELS_CACHE[path] = pickle.load(f)
+    return _LABELS_CACHE[path]
 
 def _cos_from_sq_l2(d: np.ndarray) -> np.ndarray:
     # For unit-normalized vectors: cos(x,y) = 1 - 0.5 * ||x - y||^2
@@ -19,7 +29,9 @@ def _cos_from_sq_l2(d: np.ndarray) -> np.ndarray:
 def build_cadec_ae_oae_mapping(
     ae_cadec_list: List[str],
     n_cadec: int = 5,
-    cadec_ae_threshold: float = 0.7
+    cadec_ae_threshold: float = 0.7,
+    index_path: str = OAE_INDEX_PATH,
+    label_map_path: str = OAE_LABEL_MAP_PATH,
 ) -> Dict[str, List[Tuple[str, float]]]:
     """
     Map each CADEC AE label to up to n_cadec OAE concepts above the given threshold.
@@ -28,19 +40,22 @@ def build_cadec_ae_oae_mapping(
     if not ae_cadec_list:
         return {}
 
+    index = _load_index(index_path)
+    labels = _load_labels(label_map_path)
+
     # 1) Batch-encode & normalize
     vecs = model.encode(ae_cadec_list, convert_to_tensor=False, normalize_embeddings=True)
     queries = np.asarray(vecs, dtype=np.float32)
 
     # 2) FAISS search (IndexFlatL2 over normalized vectors)
-    dists, idxs = _INDEX.search(queries, n_cadec)
+    dists, idxs = index.search(queries, n_cadec)
 
     # 3) Convert to cosine and filter
     mapping: Dict[str, List[Tuple[str, float]]] = {}
     for ae_label, d_row, i_row in zip(ae_cadec_list, dists, idxs):
         sims = _cos_from_sq_l2(d_row)
         hits = [
-            (_LABELS[i], float(s))
+            (labels[i], float(s))
             for s, i in zip(sims, i_row) if i != -1 and s >= cadec_ae_threshold
         ]
         mapping[ae_label] = hits
@@ -49,7 +64,9 @@ def build_cadec_ae_oae_mapping(
 def build_input_ae_oae_list(
     ae_input_list: List[str],
     n_input: int = 5,
-    input_ae_threshold: float = 0.7
+    input_ae_threshold: float = 0.7,
+    index_path: str = OAE_INDEX_PATH,
+    label_map_path: str = OAE_LABEL_MAP_PATH,
 ) -> List[Tuple[str, str, float]]:
     """
     For each input AE string, returns up to `n_input` OAE concepts
@@ -59,10 +76,13 @@ def build_input_ae_oae_list(
     if not ae_input_list:
         return []
 
+    index = _load_index(index_path)
+    labels = _load_labels(label_map_path)
+
     vecs = model.encode(ae_input_list, convert_to_tensor=False, normalize_embeddings=True)
     queries = np.asarray(vecs, dtype=np.float32)
 
-    dists, idxs = _INDEX.search(queries, n_input + 1)  # +1 to allow skipping identity
+    dists, idxs = index.search(queries, n_input + 1)  # +1 to allow skipping identity
     out: List[Tuple[str, str, float]] = []
 
     for inp_label, d_row, i_row in zip(ae_input_list, dists, idxs):
@@ -71,7 +91,7 @@ def build_input_ae_oae_list(
         for s, i in zip(sims, i_row):
             if i == -1:
                 continue
-            target = _LABELS[i]
+            target = labels[i]
             if target == inp_label:
                 continue  # skip identity
             if s < input_ae_threshold:

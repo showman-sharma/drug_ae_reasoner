@@ -156,8 +156,8 @@ def find_top_drug_to_input_ae_paths(
     ae_input_list: List[str],
     rx_path: str,
     cadec_kg_path: str,
-    oae_index_path: str,   # kept for interface parity; already loaded globally
-    oae_label_map_path: str,  # same as above
+    oae_index_path: str,
+    oae_label_map_path: str,
     oae_graph_path: str = OAE_GRAPH_PATH,
     n_paths: int = 5,
     n_cadec: int = 5,
@@ -184,12 +184,20 @@ def find_top_drug_to_input_ae_paths(
 
     # 2) map CADEC AEs -> OAE (threshold)
     cadec_ae_oae = build_cadec_ae_oae_mapping(
-        ae_cadec_list, n_cadec=n_cadec, cadec_ae_threshold=cadec_ae_threshold
+        ae_cadec_list,
+        n_cadec=n_cadec,
+        cadec_ae_threshold=cadec_ae_threshold,
+        index_path=oae_index_path,
+        label_map_path=oae_label_map_path,
     )
 
     # 3) map input AEs -> OAE (threshold)
     oae_input = build_input_ae_oae_list(
-        ae_input_list, n_input=n_input, input_ae_threshold=input_ae_threshold
+        ae_input_list,
+        n_input=n_input,
+        input_ae_threshold=input_ae_threshold,
+        index_path=oae_index_path,
+        label_map_path=oae_label_map_path,
     )
 
     # 4) candidate paths (0/1 hop)
