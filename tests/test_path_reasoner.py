@@ -96,4 +96,3 @@ def test_generate_fallback_drug_paths_unknown_drug():
 
     res = path_reasoner.generate_fallback_drug_paths('Ibuprofen', cadec_pairs, cadec_ae_oae_dict)
     assert res == []
-<<<<<<< HEAD
