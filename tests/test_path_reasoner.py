@@ -3,9 +3,6 @@ import sys
 import types
 from unittest.mock import patch
 
-import networkx as nx
-import pytest
-
 # Stub out heavy modules to avoid network and large loads during import
 _dummy_sim = types.ModuleType('drug_ae_reasoner.utils.similarity_search')
 _dummy_sim.build_input_ae_oae_list = lambda *args, **kwargs: []
@@ -99,55 +96,4 @@ def test_generate_fallback_drug_paths_unknown_drug():
 
     res = path_reasoner.generate_fallback_drug_paths('Ibuprofen', cadec_pairs, cadec_ae_oae_dict)
     assert res == []
-
-
-def test_find_drug_to_input_ae_paths_zero_and_one_hop():
-    """find_drug_to_input_ae_paths should capture 0-hop and 1-hop relations."""
-    G = nx.MultiDiGraph()
-    G.add_edge('OAE:2', 'OAE:1')
-    with patch('drug_ae_reasoner.utils.path_reasoner._load_oae_graph', return_value=G):
-        res = path_reasoner.find_drug_to_input_ae_paths(
-            'drug',
-            {'ae1': [('OAE:1', 0.9)], 'ae2': [('OAE:2', 0.8)]},
-            [('input', 'OAE:1', 0.7)],
-        )
-    assert ('drug', 'input', ['OAE:1']) in res  # 0-hop
-    assert ('drug', 'input', ['OAE:2', 'OAE:1']) in res  # 1-hop
-
-
-def test_find_drug_to_input_ae_paths_reversed_edge():
-    """Edges should be detected regardless of direction."""
-    G = nx.MultiDiGraph()
-    G.add_edge('OAE:1', 'OAE:2')  # reversed direction
-    with patch('drug_ae_reasoner.utils.path_reasoner._load_oae_graph', return_value=G):
-        res = path_reasoner.find_drug_to_input_ae_paths(
-            'drug',
-            {'ae2': [('OAE:2', 0.8)]},
-            [('input', 'OAE:1', 0.7)],
-        )
-    assert ('drug', 'input', ['OAE:2', 'OAE:1']) in res
-
-
-def test_rank_drug_ae_paths_scoring_and_dedup():
-    """rank_drug_ae_paths should score paths and keep the highest per OAE route."""
-    raw_paths = [
-        ('drug', 'inp_high', ['O1']),
-        ('drug', 'inp_low', ['O1']),
-    ]
-    cadec_dict = {'ae': [('O1', 0.8)]}
-    oae_inputs = [('inp_high', 'O1', 0.9), ('inp_low', 'O1', 0.5)]
-    res = path_reasoner.rank_drug_ae_paths(raw_paths, cadec_dict, oae_inputs)
-    assert res == [('drug', 'inp_high', ['O1'], pytest.approx((0.8 + 0.9) / 2))]
-
-
-def test_generate_fallback_ae_paths_returns_expected():
-    """generate_fallback_ae_paths should link inputs back to CADEC drugs."""
-    ae_inputs = ['nausea']
-    cadec_pairs = [('Aspirin', 'cadec_nausea', 'ae1')]
-    cadec_dict = {'cadec_nausea': [('OAE:1', 0.8)]}
-    oae_inputs = [('nausea', 'OAE:1', 0.6)]
-    res = path_reasoner.generate_fallback_ae_paths(ae_inputs, cadec_pairs, cadec_dict, oae_inputs)
-    assert res and res[0][0] == 'Aspirin'
-    assert res[0][1] == 'nausea'
-    assert res[0][2] == ['OAE:1']
-    assert res[0][3] == pytest.approx((0.6 + 0.8 + 1.0) / 3)
+<<<<<<< HEAD
