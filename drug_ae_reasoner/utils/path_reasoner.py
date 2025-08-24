@@ -6,13 +6,7 @@ from typing import List, Tuple, Dict
 from .similarity_search import build_input_ae_oae_list, build_cadec_ae_oae_mapping
 from ..data.cadec_loader import get_cadec_ae_pairs, get_cadec_drug_nodes
 from .verbalizer import verbalize_drug_to_input_ae_paths
-from ..config import (
-    RX_PATH,
-    CADEC_KG_PATH,
-    OAE_INDEX_PATH,
-    OAE_LABEL_MAP_PATH,
-    OAE_GRAPH_PATH,
-)
+from ..config import OAE_GRAPH_PATH,  RX_PATH
 
 # ─── Simple in-proc cache for loaded OAE graph ──────────────────────────
 _GRAPH_CACHE: Dict[str, nx.MultiDiGraph] = {}
@@ -160,10 +154,10 @@ def generate_fallback_ae_paths(
 def find_top_drug_to_input_ae_paths(
     drug: str,
     ae_input_list: List[str],
-    rx_path: str = RX_PATH,
-    cadec_kg_path: str = CADEC_KG_PATH,
-    oae_index_path: str = OAE_INDEX_PATH,
-    oae_label_map_path: str = OAE_LABEL_MAP_PATH,
+    rx_path: str,
+    cadec_kg_path: str,
+    oae_index_path: str,
+    oae_label_map_path: str,
     oae_graph_path: str = OAE_GRAPH_PATH,
     n_paths: int = 5,
     n_cadec: int = 5,
@@ -180,8 +174,10 @@ def find_top_drug_to_input_ae_paths(
       4) OAE graph 0/1-hop paths, ranking, fallback, verbalization
     """
     # 1) CADEC drug nodes & pairs
-    # Use caller-provided resource paths so tests or deployments can supply
-    # alternative data locations instead of the package defaults.
+    # Respect the caller-provided RxNorm path instead of always using the
+    # package-level default.  Previously this function ignored the `rx_path`
+    # argument and unconditionally used `RX_PATH`, making it impossible to run
+    # against alternative RxNorm files (e.g., in tests or custom deployments).
     drug_nodes = get_cadec_drug_nodes(drug, cadec_kg_path, rx_path)
     cadec_pairs = get_cadec_ae_pairs(drug_nodes, cadec_kg_path)
     ae_cadec_list = sorted({ae for _, ae, _ in cadec_pairs})

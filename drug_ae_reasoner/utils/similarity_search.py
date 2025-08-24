@@ -2,7 +2,7 @@
 import pickle
 import numpy as np
 import faiss
-from typing import List, Tuple, Dict, Optional
+from typing import List, Tuple, Dict
 
 from ..config import OAE_INDEX_PATH, OAE_LABEL_MAP_PATH
 from .encoding import model  # SentenceTransformer instance
@@ -30,8 +30,8 @@ def build_cadec_ae_oae_mapping(
     ae_cadec_list: List[str],
     n_cadec: int = 5,
     cadec_ae_threshold: float = 0.7,
-    index_path: Optional[str] = None,
-    label_map_path: Optional[str] = None,
+    index_path: str = OAE_INDEX_PATH,
+    label_map_path: str = OAE_LABEL_MAP_PATH,
 ) -> Dict[str, List[Tuple[str, float]]]:
     """
     Map each CADEC AE label to up to n_cadec OAE concepts above the given threshold.
@@ -39,9 +39,6 @@ def build_cadec_ae_oae_mapping(
     """
     if not ae_cadec_list:
         return {}
-
-    index_path = index_path or OAE_INDEX_PATH
-    label_map_path = label_map_path or OAE_LABEL_MAP_PATH
 
     index = _load_index(index_path)
     labels = _load_labels(label_map_path)
@@ -68,8 +65,8 @@ def build_input_ae_oae_list(
     ae_input_list: List[str],
     n_input: int = 5,
     input_ae_threshold: float = 0.7,
-    index_path: Optional[str] = None,
-    label_map_path: Optional[str] = None,
+    index_path: str = OAE_INDEX_PATH,
+    label_map_path: str = OAE_LABEL_MAP_PATH,
 ) -> List[Tuple[str, str, float]]:
     """
     For each input AE string, returns up to `n_input` OAE concepts
@@ -78,9 +75,6 @@ def build_input_ae_oae_list(
     """
     if not ae_input_list:
         return []
-
-    index_path = index_path or OAE_INDEX_PATH
-    label_map_path = label_map_path or OAE_LABEL_MAP_PATH
 
     index = _load_index(index_path)
     labels = _load_labels(label_map_path)
