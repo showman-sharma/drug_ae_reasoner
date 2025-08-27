@@ -58,7 +58,26 @@ drug_ae_reasoner/
 
 ---
 
-## 🛠️ Building the Knowledge Resources
+
+## 🧬 Drug Mention-Entity Linking (MEL)
+
+When you provide a drug name, the system tries to map it to a node in the CADEC knowledge graph using a multi-step process:
+
+1. **RxNorm Normalization:**
+    Attempts to match the input drug to a standard RxNorm CUI using exact and synonym matches.
+
+2. **SapBERT Embedding Search (MEL):**
+    If no exact match is found, the system uses SapBERT (a biomedical language model) to embed your input and searches for the most similar drug nodes using a FAISS index.
+    - You can control the number of candidates and similarity threshold with `--mel_top_k` and `--mel_threshold`.
+    - To disable embedding-based search, use `--no_embedding`.
+
+3. **Fallbacks:**
+    If neither method finds a match, the system will report that no drug node was found.
+
+**Tip:**
+If your drug input is not found, try using a generic name, check spelling, or lower the MEL threshold for fuzzier matching.
+
+---
 
 Once all files are in place, run the unified data setup pipeline:
 
@@ -92,9 +111,22 @@ This script performs:
 Once installed and built, run the reasoning CLI:
 
 
+
 ```bash
-python -m drug_ae_reasoner.main --drug lipitor --aes pain joints
+python -m drug_ae_reasoner.main \
+    --drug lipitor \
+    --aes pain joints \
+    --mel_top_k 5 \
+    --mel_threshold 0.5 \
+    --n_paths 3 \
+    --n_cadec 3 \
+    --n_input 3 \
+    --cadec_ae_thresh 0.7 \
+    --input_ae_thresh 0.7 \
+    --n_disconnect 2
 ```
+
+You can also override the default OAE resources, e.g.:
 
 This will:
 
@@ -105,8 +137,15 @@ This will:
 
 You can also override the default OAE resources, e.g.:
 
+
 ```bash
-python -m drug_ae_reasoner.main --drug lipitor --aes pain --oae_index_path path/to/index.faiss --oae_label_map_path path/to/labels.pkl
+python -m drug_ae_reasoner.main \
+    --drug lipitor \
+    --aes pain \
+    --oae_index_path path/to/index.faiss \
+    --oae_label_map_path path/to/labels.pkl \
+    --mel_top_k 5 \
+    --mel_threshold 0.5
 ```
 
 ---
@@ -125,6 +164,8 @@ from drug_ae_reasoner.config import (
     OAE_GRAPH_PATH,
 )
 
+# find_top_drug_to_input_ae_paths performs the full reasoning pipeline, including drug MEL.
+# You can control MEL behavior with mel_top_k, mel_threshold, and use_embedding.
 connected, top_paths, fb_drug, fb_ae, verb = find_top_drug_to_input_ae_paths(
     drug="lipitor",
     ae_input_list=["pain", "joints"],
@@ -139,6 +180,9 @@ connected, top_paths, fb_drug, fb_ae, verb = find_top_drug_to_input_ae_paths(
     input_ae_threshold=0.7,
     n_paths=5,
     n_disconnect=3,
+    mel_top_k=5,           # MEL: number of drug candidates to consider
+    mel_threshold=0.5,     # MEL: similarity threshold for drug mapping
+    use_embedding=True,    # MEL: use SapBERT embedding-based search
 )
 
 print("\n".join(verb))
