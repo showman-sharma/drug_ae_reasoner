@@ -48,14 +48,19 @@ def load_model(path: str | None = None) -> SentenceTransformer:
     model_path = path or MODEL_DIR
     config_file = os.path.join(model_path, "config.json")
 
-    if not os.path.isdir(model_path) or not os.path.exists(config_file):
-        raise FileNotFoundError(
-            f"SapBERT model not found at '{model_path}'. "
-            "Download the model separately and provide its path to `load_model`."
-        )
+    if os.path.isdir(model_path) and os.path.exists(config_file):
+        logger.info("Loading SapBERT model from %s", model_path)
+        model = SentenceTransformer(model_path)
+        return model
 
-    logger.info("Loading SapBERT model from %s", model_path)
-    model = SentenceTransformer(model_path)
+    # If not found locally, download from HuggingFace and cache to MODEL_DIR
+    hf_model_id = "cambridgeltl/SapBERT-from-PubMedBERT-fulltext"
+    logger.info(f"SapBERT model not found at '{model_path}'. Downloading from HuggingFace Hub: {hf_model_id}")
+    model = SentenceTransformer(hf_model_id)
+    # Save the model to MODEL_DIR for future use
+    os.makedirs(model_path, exist_ok=True)
+    model.save(model_path)
+    logger.info(f"SapBERT model downloaded and cached at '{model_path}'")
     return model
 
 

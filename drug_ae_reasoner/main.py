@@ -18,6 +18,9 @@ def main():
     parser.add_argument("--n_disconnect", type=int, default=3)
     parser.add_argument("--oae_index_path", type=str, default=OAE_INDEX_PATH, help="Path to OAE FAISS index")
     parser.add_argument("--oae_label_map_path", type=str, default=OAE_LABEL_MAP_PATH, help="Path to OAE label map")
+    parser.add_argument("--mel_top_k", type=int, default=5, help="Top K MEL (SapBERT) drug matches to consider")
+    parser.add_argument("--mel_threshold", type=float, default=0.7, help="Similarity threshold for MEL (SapBERT) drug mapping")
+    parser.add_argument("--no_embedding", action="store_true", help="Disable SapBERT embedding-based drug mapping (MEL)")
     args = parser.parse_args()
 
     print(f"[INFO] Running Drug-AE Path Reasoning for drug: {args.drug}")
@@ -36,7 +39,10 @@ def main():
         n_input=args.n_input,
         cadec_ae_threshold=args.cadec_ae_thresh,
         input_ae_threshold=args.input_ae_thresh,
-        n_disconnect=args.n_disconnect
+        n_disconnect=args.n_disconnect,
+        mel_top_k=args.mel_top_k,
+        mel_threshold=args.mel_threshold,
+        use_embedding=not args.no_embedding
     )
 
     if connected:

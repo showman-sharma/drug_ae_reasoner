@@ -249,35 +249,41 @@ def get_cadec_drug_nodes(
     if hits:
         return hits
 
-    # Pass 3: MEL embedding similarity search (SapBERT)
+    # Pass 3: MEL embedding similarity search (SapBERT) using FAISS
     if use_embedding and mel_top_k > 0:
-        if kg_path not in _DRUG_EMB_CACHE:
-            emb_list: List[Tuple[str, str, Set[str], np.ndarray]] = []
-            for node, data in G.nodes(data=True):
-                if data.get("type") != "drug":
-                    continue
-                cuis = set(data.get("cuis", []))
-                names = [data.get("label") or ""] + list(data.get("synonyms", []))
-                seen = set()
-                for nm in names:
-                    nm_l = nm.lower()
-                    if nm_l in seen:
-                        continue
-                    seen.add(nm_l)
-                    emb_list.append((node, nm_l, cuis, encode_text(nm)))
-            _DRUG_EMB_CACHE[kg_path] = emb_list
-
-        q_vec = encode_text(drug_label)
-        sims = [float(np.dot(q_vec, emb)) for _, _, _, emb in _DRUG_EMB_CACHE[kg_path]]
-        ordered = sorted(zip(_DRUG_EMB_CACHE[kg_path], sims), key=lambda x: x[1], reverse=True)
-        for (node, lbl, cuis, _), sim in ordered[:mel_top_k]:
-            if sim >= mel_threshold:
-                if mel_require_confirmation:
-                    lbl_norm = _norm(lbl)
-                    if q_cuis & cuis or lbl_norm == q_norm or q_norm in lbl_norm:
-                        hits.append((node, lbl, cuis))
-                else:
+        import faiss
+        faiss_dir = os.path.join(os.path.dirname(kg_path))
+        index_path = os.path.join(faiss_dir, "drug_faiss_index.faiss")
+        names_path = os.path.join(faiss_dir, "drug_faiss_names.pkl")
+        nodes_path = os.path.join(faiss_dir, "drug_faiss_nodes.pkl")
+        if not (os.path.exists(index_path) and os.path.exists(names_path) and os.path.exists(nodes_path)):
+            logger.warning("[CADEC] FAISS drug index or metadata missing. Falling back to slow MEL search.")
+            return hits
+        import pickle
+        index = faiss.read_index(index_path)
+        with open(names_path, "rb") as f:
+            drug_texts = pickle.load(f)
+        with open(nodes_path, "rb") as f:
+            node_ids = pickle.load(f)
+        q_vec = encode_text(drug_label).astype(np.float32)
+        q_vec = q_vec.reshape(1, -1)
+        dists, idxs = index.search(q_vec, mel_top_k)
+        for dist, idx in zip(dists[0], idxs[0]):
+            if idx == -1:
+                continue
+            sim = 1.0 - dist / 2.0  # convert L2 to cosine
+            if sim < mel_threshold:
+                continue
+            node = node_ids[idx]
+            lbl = drug_texts[idx]
+            data = G.nodes[node]
+            cuis = set(data.get("cuis", []))
+            if mel_require_confirmation:
+                lbl_norm = _norm(lbl)
+                if q_cuis & cuis or lbl_norm == q_norm or q_norm in lbl_norm:
                     hits.append((node, lbl, cuis))
+            else:
+                hits.append((node, lbl, cuis))
 
     if not hits:
         logger.warning(

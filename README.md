@@ -66,9 +66,10 @@ Once all files are in place, run the unified data setup pipeline:
 python -m drug_ae_reasoner.data.builder.run_all
 ```
 
+
 This script performs:
 
-* CADEC KG creation + split
+* CADEC KG creation from the full dataset
 * Drug normalization using RxNorm
 * OAE embedding + FAISS indexing
 * OWL to NetworkX graph conversion
@@ -77,9 +78,8 @@ This script performs:
 
 | File                          | Folder        | Description                          |
 | ----------------------------- | ------------- | ------------------------------------ |
-| `cadec_verbalizer_kg.gpickle` | `data/cadec/` | Raw CADEC drug–AE graph              |
+| `cadec_verbalizer_kg.gpickle` | `data/cadec/` | CADEC drug–AE graph (full dataset)   |
 | `cadec_normalized_kg.gpickle` | `data/cadec/` | Normalized with RxNorm CUIs          |
-| `train_30.jsonl`              | `data/cadec/` | Raw training subset (30%)            |
 | `oae_sapbert_index.faiss`     | `data/oae/`   | FAISS index for OAE label embeddings |
 | `oae_labels.pkl`              | `data/oae/`   | Label map for FAISS vectors          |
 | `oae_graph.gpickle`           | `data/oae/`   | Directed ontology graph from OAE.owl |
@@ -88,10 +88,11 @@ This script performs:
 
 ## 🧪 CLI Usage
 
+
 Once installed and built, run the reasoning CLI:
 
 ```bash
-drug_ae_reasoner --drug metformin --aes nausea vomiting
+python -m drug_ae_reasoner.main --drug metformin --aes nausea vomiting
 ```
 
 This will:
@@ -104,7 +105,7 @@ This will:
 You can also override the default OAE resources, e.g.:
 
 ```bash
-drug_ae_reasoner --drug metformin --aes nausea --oae_index_path path/to/index.faiss --oae_label_map_path path/to/labels.pkl
+python -m drug_ae_reasoner.main --drug metformin --aes nausea --oae_index_path path/to/index.faiss --oae_label_map_path path/to/labels.pkl
 ```
 
 ---

@@ -164,7 +164,10 @@ def find_top_drug_to_input_ae_paths(
     n_input: int = 5,
     cadec_ae_threshold: float = 0.7,
     input_ae_threshold: float = 0.7,
-    n_disconnect: int = 3
+    n_disconnect: int = 3,
+    mel_top_k: int = 5,
+    mel_threshold: float = 0.7,
+    use_embedding: bool = True
 ):
     """
     Orchestrates:
@@ -178,7 +181,14 @@ def find_top_drug_to_input_ae_paths(
     # package-level default.  Previously this function ignored the `rx_path`
     # argument and unconditionally used `RX_PATH`, making it impossible to run
     # against alternative RxNorm files (e.g., in tests or custom deployments).
-    drug_nodes = get_cadec_drug_nodes(drug, cadec_kg_path, rx_path)
+    drug_nodes = get_cadec_drug_nodes(
+        drug,
+        cadec_kg_path,
+        rx_path,
+        mel_top_k=mel_top_k,
+        mel_threshold=mel_threshold,
+        use_embedding=use_embedding
+    )
     cadec_pairs = get_cadec_ae_pairs(drug_nodes, cadec_kg_path)
     ae_cadec_list = sorted({ae for _, ae, _ in cadec_pairs})
 

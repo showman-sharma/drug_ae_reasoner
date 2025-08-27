@@ -44,7 +44,8 @@ def build_cadec_ae_oae_mapping(
     labels = _load_labels(label_map_path)
 
     # 1) Batch-encode & normalize
-    vecs = model.encode(ae_cadec_list, convert_to_tensor=False, normalize_embeddings=True)
+    from .encoding import encode_text
+    vecs = [encode_text(txt) for txt in ae_cadec_list]
     queries = np.asarray(vecs, dtype=np.float32)
 
     # 2) FAISS search (IndexFlatL2 over normalized vectors)
@@ -79,7 +80,8 @@ def build_input_ae_oae_list(
     index = _load_index(index_path)
     labels = _load_labels(label_map_path)
 
-    vecs = model.encode(ae_input_list, convert_to_tensor=False, normalize_embeddings=True)
+    from .encoding import encode_text
+    vecs = [encode_text(txt) for txt in ae_input_list]
     queries = np.asarray(vecs, dtype=np.float32)
 
     dists, idxs = index.search(queries, n_input + 1)  # +1 to allow skipping identity

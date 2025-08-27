@@ -3,6 +3,7 @@ tags:
 - sentence-transformers
 - sentence-similarity
 - feature-extraction
+- dense
 base_model: cambridgeltl/SapBERT-from-PubMedBERT-fulltext
 pipeline_tag: sentence-similarity
 library_name: sentence-transformers
@@ -34,7 +35,7 @@ This is a [sentence-transformers](https://www.SBERT.net) model finetuned from [c
 
 ```
 SentenceTransformer(
-  (0): Transformer({'max_seq_length': 512, 'do_lower_case': False}) with Transformer model: BertModel 
+  (0): Transformer({'max_seq_length': 512, 'do_lower_case': False, 'architecture': 'BertModel'})
   (1): Pooling({'word_embedding_dimension': 768, 'pooling_mode_cls_token': False, 'pooling_mode_mean_tokens': True, 'pooling_mode_max_tokens': False, 'pooling_mode_mean_sqrt_len_tokens': False, 'pooling_mode_weightedmean_tokens': False, 'pooling_mode_lasttoken': False, 'include_prompt': True})
 )
 ```
@@ -67,8 +68,10 @@ print(embeddings.shape)
 
 # Get the similarity scores for the embeddings
 similarities = model.similarity(embeddings, embeddings)
-print(similarities.shape)
-# [3, 3]
+print(similarities)
+# tensor([[1.0000, 0.5732, 0.3395],
+#         [0.5732, 1.0000, 0.2973],
+#         [0.3395, 0.2973, 1.0000]])
 ```
 
 <!--
@@ -110,13 +113,13 @@ You can finetune this model on your own dataset.
 ## Training Details
 
 ### Framework Versions
-- Python: 3.10.11
-- Sentence Transformers: 4.1.0
-- Transformers: 4.51.3
-- PyTorch: 2.7.0+cpu
+- Python: 3.12.10
+- Sentence Transformers: 5.1.0
+- Transformers: 4.55.4
+- PyTorch: 2.8.0+cpu
 - Accelerate: 
 - Datasets: 
-- Tokenizers: 0.21.1
+- Tokenizers: 0.21.4
 
 ## Citation
 
