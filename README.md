@@ -91,8 +91,9 @@ This script performs:
 
 Once installed and built, run the reasoning CLI:
 
+
 ```bash
-python -m drug_ae_reasoner.main --drug metformin --aes nausea vomiting
+python -m drug_ae_reasoner.main --drug lipitor --aes pain joints
 ```
 
 This will:
@@ -105,7 +106,7 @@ This will:
 You can also override the default OAE resources, e.g.:
 
 ```bash
-python -m drug_ae_reasoner.main --drug metformin --aes nausea --oae_index_path path/to/index.faiss --oae_label_map_path path/to/labels.pkl
+python -m drug_ae_reasoner.main --drug lipitor --aes pain --oae_index_path path/to/index.faiss --oae_label_map_path path/to/labels.pkl
 ```
 
 ---
@@ -125,8 +126,8 @@ from drug_ae_reasoner.config import (
 )
 
 connected, top_paths, fb_drug, fb_ae, verb = find_top_drug_to_input_ae_paths(
-    drug="metformin",
-    ae_input_list=["nausea", "vomiting"],
+    drug="lipitor",
+    ae_input_list=["pain", "joints"],
     rx_path=RX_PATH,
     cadec_kg_path=CADEC_KG_PATH,
     oae_index_path=OAE_INDEX_PATH,
@@ -141,7 +142,6 @@ connected, top_paths, fb_drug, fb_ae, verb = find_top_drug_to_input_ae_paths(
 )
 
 print("\n".join(verb))
-
 ```
 
 ---
