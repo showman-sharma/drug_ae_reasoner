@@ -1,3 +1,5 @@
+# Required for ADE evaluation in tests/counter.py
+datasets
 numpy>=1.25.0
 scikit-learn>=1.6.0
 faiss-cpu>=1.7.4
