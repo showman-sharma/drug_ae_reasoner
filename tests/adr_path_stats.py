@@ -14,6 +14,23 @@ with open(ADR_PATH, "r", encoding="utf-8") as f:
     data = json.load(f)
     records = data["train"] if isinstance(data, dict) and "train" in data else data
 
+# Batch MEL for all unique AE mentions
+all_aes = set()
+for obj in records:
+    text = obj.get("text", "")
+    ae_spans = obj.get("ADE_list", [])
+    all_aes.update([text[start:end].strip().lower() for start, end in ae_spans if isinstance(start, int) and isinstance(end, int)])
+
+print(f"Running batch MEL for {len(all_aes)} unique AE mentions...")
+ae_mel_matches = build_input_ae_oae_list(
+    list(all_aes),
+    n_input=1,
+    input_ae_threshold=0.6,
+    index_path=os.path.join(os.path.dirname(CADEC_KG_PATH), "ae_faiss_index.faiss"),
+    label_map_path=os.path.join(os.path.dirname(CADEC_KG_PATH), "ae_faiss_names.pkl")
+)
+ae_mel_map = {ae: matched for ae, matched, _ in ae_mel_matches}
+
 results = []
 paths_found = 0
 for idx, obj in enumerate(tqdm(records, desc="Checking ADR paths in KG")):
@@ -29,25 +46,16 @@ for idx, obj in enumerate(tqdm(records, desc="Checking ADR paths in KG")):
             continue
         ae_pairs = get_cadec_ae_pairs(drug_nodes, CADEC_KG_PATH)
         ae_labels = set([ae for _, ae, _ in ae_pairs])
-        # Use MEL for AE matching (embedding-based)
-        if ae_labels:
-            ae_mel_matches = build_input_ae_oae_list(
-                aes,
-                n_input=1,
-                input_ae_threshold=0.6,  # Same threshold as entity coverage
-                index_path=os.path.join(os.path.dirname(CADEC_KG_PATH), "ae_faiss_index.faiss"),
-                label_map_path=os.path.join(os.path.dirname(CADEC_KG_PATH), "ae_faiss_names.pkl")
-            )
-            matched_ae_set = set([ae for _, ae, _ in ae_mel_matches])
-            for ae in matched_ae_set:
-                if ae in ae_labels:
-                    results.append({
-                        "id": obj.get("id", ""),
-                        "drug": drug,
-                        "ae": ae,
-                        "path_found": True
-                    })
-                    found_path = True
+        for ae in aes:
+            matched_ae = ae_mel_map.get(ae)
+            if matched_ae and matched_ae in ae_labels:
+                results.append({
+                    "id": obj.get("id", ""),
+                    "drug": drug,
+                    "ae": matched_ae,
+                    "path_found": True
+                })
+                found_path = True
     if not found_path:
         results.append({
             "id": obj.get("id", ""),
