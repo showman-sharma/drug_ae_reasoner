@@ -13,7 +13,12 @@ _LABELS_CACHE: Dict[str, List[str]] = {}
 
 def _load_index(path: str) -> faiss.Index:
     if path not in _INDEX_CACHE:
-        _INDEX_CACHE[path] = faiss.read_index(path)
+        index = faiss.read_index(path)
+        # Move FAISS index to GPU if available
+        if faiss.get_num_gpus() > 0:
+            res = faiss.StandardGpuResources()
+            index = faiss.index_cpu_to_gpu(res, 0, index)
+        _INDEX_CACHE[path] = index
     return _INDEX_CACHE[path]
 
 def _load_labels(path: str) -> List[str]:
@@ -80,8 +85,14 @@ def build_input_ae_oae_list(
     index = _load_index(index_path)
     labels = _load_labels(label_map_path)
 
-    from .encoding import encode_text
-    vecs = [encode_text(txt) for txt in ae_input_list]
+    from .encoding import load_model
+    import torch
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    model = load_model()
+    print(f"Encoding {len(ae_input_list)} AE mentions in batch mode on {device}...")
+    vecs = model.encode(ae_input_list, device=device, batch_size=128)
+    # Normalize vectors
+    vecs = np.array([v / (np.linalg.norm(v) if np.linalg.norm(v) > 0 else 1.0) for v in vecs], dtype=np.float32)
     queries = np.asarray(vecs, dtype=np.float32)
 
     dists, idxs = index.search(queries, n_input + 1)  # +1 to allow skipping identity

@@ -25,23 +25,10 @@ def verbalize_drug_to_input_ae_paths(
 
     narr: List[str] = []
     for drug_lbl, inp_lbl, path_nodes, score in top_paths:
-        # Direct 0-hop path in OAE
-        if len(path_nodes) == 1:
-            oae = path_nodes[0]
-            sim2 = input_sim.get((inp_lbl, oae), 0.0)
-            lines = [
-                f"{drug_lbl} possibly causes an AE mapped to {oae} (OAE);",
-                f"{oae} is similar to input '{inp_lbl}' (sim={sim2:.2f});",
-                f"# total path score = {score:.2f}"
-            ]
-            narr.append(" ".join(lines))
-            continue
-
-        # 1-hop path (or more if you extend later)
+        # Always try to recover the CADEC-AE label that mapped to the first OAE node
         oae_from, oae_to = path_nodes[0], path_nodes[-1]
         middle = path_nodes[1:-1]
 
-        # try to recover the CADEC-AE label that mapped to oae_from (best effort)
         ae_cadec = None
         for ae, lst in cadec_ae_oae_dict.items():
             if any(o == oae_from for o, _ in lst):
@@ -50,9 +37,8 @@ def verbalize_drug_to_input_ae_paths(
 
         sim1 = cadec_sim.get((ae_cadec, oae_from), 0.0) if ae_cadec else 0.0
         sim2 = input_sim.get((inp_lbl, oae_to), 0.0)
-        cui_str = cui_map.get(ae_cadec or "", "N/A")
 
-        lines = [f"{drug_lbl} (CUIs: {cui_str}) → {ae_cadec or 'unknown AE'}"]
+        lines = [f"{drug_lbl} → {ae_cadec or 'unknown AE'}"]
         if middle:
             for n in middle:
                 lines.append(f"→ {n} (OAE)")

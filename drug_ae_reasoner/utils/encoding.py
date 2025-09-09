@@ -81,7 +81,10 @@ def encode_text(text: str) -> np.ndarray:
 
     assert model is not None  # For type checkers
 
-    vec = model.encode([text])[0]
+    # Use GPU if available
+    import torch
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
+    vec = model.encode([text], device=device)[0]
     vec = np.array(vec, dtype=np.float32)
     norm = np.linalg.norm(vec)
     normalized = vec / (norm if norm > 0 else 1.0)
