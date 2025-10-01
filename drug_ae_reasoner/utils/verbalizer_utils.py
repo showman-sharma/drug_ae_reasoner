@@ -45,10 +45,21 @@ def process_doc(doc_id, tokens, G):
         fallback = doc_id.split(".")[0]
         drug_spans = [(fallback, None)]
     # Add drug nodes
+    import re
+    def normalize_drug_name(name):
+        # Remove punctuation, extra spaces, and modifiers like '#', numbers
+        name = name.lower()
+        name = re.sub(r"[^a-z0-9 ]", "", name)
+        name = re.sub(r"\s+", " ", name).strip()
+        # Remove trailing numbers and hash (e.g., 'tylenol # 3' -> 'tylenol')
+        name = re.sub(r"\s*#?\s*\d+$", "", name)
+        return name
+
     for drug, _ in drug_spans:
-        node = f"drug_{drug.lower()}"
+        norm_drug = normalize_drug_name(drug)
+        node = f"drug_{norm_drug}"
         if node not in G:
-            G.add_node(node, label=drug, type="drug", doc=doc_id)
+            G.add_node(node, label=norm_drug, type="drug", doc=doc_id)
     # Add ADR nodes
     for adr, _ in adr_spans:
         node = f"adr_{adr.lower()}"

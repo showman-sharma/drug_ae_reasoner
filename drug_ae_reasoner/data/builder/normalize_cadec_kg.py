@@ -37,24 +37,36 @@ def load_rxnorm(rrf_dir):
     return cui_to_names
 
 def normalize():
+
     cadec_dir = os.path.join("drug_ae_reasoner", "data", "cadec")
     rx_dir = os.path.join("drug_ae_reasoner", "data", "rxnorm")
     in_kg = os.path.join(cadec_dir, "cadec_verbalizer_kg.gpickle")
     out_kg = os.path.join(cadec_dir, "cadec_normalized_kg.gpickle")
 
     G = pickle.load(open(in_kg, "rb"))
-    rx_map = load_rxnorm(rx_dir)
+
+    # Try to load RxNorm, but skip if unavailable
+    try:
+        rx_map = load_rxnorm(rx_dir)
+    except Exception as e:
+        print(f"RxNorm mapping unavailable or failed: {e}\nProceeding without RxNorm.")
+        rx_map = None
 
     for n, data in G.nodes(data=True):
         if data.get("type") == "drug":
             label = data.get("label", "")
-            cuis = {cui for cui, names in rx_map.items() if any(label.lower() in name for name in names)}
-            data["cuis"] = cuis
-            syn = set()
-            for cui in cuis:
-                syn.update(rx_map.get(cui, set()))
-            if syn:
-                data["synonyms"] = sorted(syn)
+            if rx_map:
+                cuis = {cui for cui, names in rx_map.items() if any(label.lower() in name for name in names)}
+                data["cuis"] = cuis
+                syn = set()
+                for cui in cuis:
+                    syn.update(rx_map.get(cui, set()))
+                if syn:
+                    data["synonyms"] = sorted(syn)
+            # If RxNorm is not available, keep original synonyms and label
+            else:
+                if "synonyms" not in data:
+                    data["synonyms"] = [label]
 
     with open(out_kg, "wb") as f:
         pickle.dump(G, f)

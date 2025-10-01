@@ -155,9 +155,9 @@ def find_top_drug_to_input_ae_paths(
     drug: str,
     ae_input_list: List[str],
     rx_path: str,
-    cadec_kg_path: str,
-    oae_index_path: str,
-    oae_label_map_path: str,
+    cadec_kg_path: str = None,
+    oae_index_path: str = None,
+    oae_label_map_path: str = None,
     oae_graph_path: str = OAE_GRAPH_PATH,
     n_paths: int = 5,
     n_cadec: int = 5,
@@ -167,7 +167,8 @@ def find_top_drug_to_input_ae_paths(
     n_disconnect: int = 3,
     mel_top_k: int = 5,
     mel_threshold: float = 0.7,
-    use_embedding: bool = True
+    use_embedding: bool = True,
+    cadec_kg: object = None
 ):
     """
     Orchestrates:
@@ -181,15 +182,17 @@ def find_top_drug_to_input_ae_paths(
     # package-level default.  Previously this function ignored the `rx_path`
     # argument and unconditionally used `RX_PATH`, making it impossible to run
     # against alternative RxNorm files (e.g., in tests or custom deployments).
+    # Use preloaded KG if provided
+    kg_for_lookup = cadec_kg if cadec_kg is not None else cadec_kg_path
     drug_nodes = get_cadec_drug_nodes(
         drug,
-        cadec_kg_path,
+        kg_for_lookup,
         rx_path,
         mel_top_k=mel_top_k,
         mel_threshold=mel_threshold,
         use_embedding=use_embedding
     )
-    cadec_pairs = get_cadec_ae_pairs(drug_nodes, cadec_kg_path)
+    cadec_pairs = get_cadec_ae_pairs(drug_nodes, kg_for_lookup)
     ae_cadec_list = sorted({ae for _, ae, _ in cadec_pairs})
 
     # 2) map CADEC AEs -> OAE (threshold)

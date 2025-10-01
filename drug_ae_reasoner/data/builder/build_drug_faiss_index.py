@@ -14,11 +14,16 @@ def main():
 
     drug_texts = []
     node_ids = []
+    seen_pairs = set()
     for node, data in G.nodes(data=True):
         if data.get("type") == "drug":
             names = [data.get("label") or ""] + list(data.get("synonyms", []))
             for nm in names:
                 nm_l = nm.lower()
+                pair = (nm_l, node)
+                if pair in seen_pairs:
+                    continue
+                seen_pairs.add(pair)
                 drug_texts.append(nm_l)
                 node_ids.append(node)
 

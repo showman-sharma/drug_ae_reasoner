@@ -22,8 +22,11 @@ def main():
         pickle.dump(G, f)
     print(f"Saved KG (full CADEC): {kg_out}")
 
-    for drug in list_all_unique_drugs(G)[:10]:
+    print("All drug node labels in KG:")
+    all_drugs = list_all_unique_drugs(G)
+    for drug in all_drugs:
         print(" •", drug)
+    print(f"Total unique drugs: {len(all_drugs)}")
 
 if __name__ == "__main__":
     main()

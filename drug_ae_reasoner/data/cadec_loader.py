@@ -209,10 +209,24 @@ def get_cadec_drug_nodes(
     Returns:
       List of (node_id, label_lower, cuis_set)
     """
-    G = _load_cadec_graph(kg_path)
-    # Ensure RxNorm synonyms are merged for label matching
-    if _merge_rxnorm_synonyms(G, rxn_rrf_path):
-        _DRUG_EMB_CACHE.pop(kg_path, None)
+    import networkx as nx
+    if isinstance(kg_path, (nx.DiGraph, nx.MultiDiGraph)):
+        G = kg_path
+    else:
+        import networkx as nx
+        if isinstance(kg_path, (nx.DiGraph, nx.MultiDiGraph)):
+            G = kg_path
+            kg_path_str = None
+        else:
+            G = _load_cadec_graph(kg_path)
+            kg_path_str = kg_path
+        # Ensure RxNorm synonyms are merged for label matching
+        if _merge_rxnorm_synonyms(G, rxn_rrf_path):
+            if kg_path_str is not None:
+                _DRUG_EMB_CACHE.pop(kg_path_str, None)
+        # Only use os.path operations if kg_path_str is a string
+        if kg_path_str is not None:
+            faiss_dir = os.path.join(os.path.dirname(kg_path_str))
 
     q_cuis = _rxnorm_cuis_for(drug_label, rxn_rrf_path)
     q_norm = _norm(drug_label)
@@ -250,21 +264,30 @@ def get_cadec_drug_nodes(
         return hits
 
     # Pass 3: MEL embedding similarity search (SapBERT) using FAISS
-    if use_embedding and mel_top_k > 0:
+    import networkx as nx
+    is_graph = isinstance(kg_path, (nx.DiGraph, nx.MultiDiGraph))
+    # Preload FAISS index and embedding files once per process for batch efficiency
+    if use_embedding and mel_top_k > 0 and not is_graph:
         import faiss
+        import pickle
         faiss_dir = os.path.join(os.path.dirname(kg_path))
         index_path = os.path.join(faiss_dir, "drug_faiss_index.faiss")
         names_path = os.path.join(faiss_dir, "drug_faiss_names.pkl")
         nodes_path = os.path.join(faiss_dir, "drug_faiss_nodes.pkl")
-        if not (os.path.exists(index_path) and os.path.exists(names_path) and os.path.exists(nodes_path)):
-            logger.warning("[CADEC] FAISS drug index or metadata missing. Falling back to slow MEL search.")
-            return hits
-        import pickle
-        index = faiss.read_index(index_path)
-        with open(names_path, "rb") as f:
-            drug_texts = pickle.load(f)
-        with open(nodes_path, "rb") as f:
-            node_ids = pickle.load(f)
+        global _FAISS_INDEX, _FAISS_NAMES, _FAISS_NODES
+        if '_FAISS_INDEX' not in globals():
+            if not (os.path.exists(index_path) and os.path.exists(names_path) and os.path.exists(nodes_path)):
+                logger.warning("[CADEC] FAISS drug index or metadata missing. Skipping embedding-based semantic search, using only string/ontology matching.")
+                # Do not crash, just skip embedding search and return current hits
+                return hits
+            _FAISS_INDEX = faiss.read_index(index_path)
+            with open(names_path, "rb") as f:
+                _FAISS_NAMES = pickle.load(f)
+            with open(nodes_path, "rb") as f:
+                _FAISS_NODES = pickle.load(f)
+        index = _FAISS_INDEX
+        drug_texts = _FAISS_NAMES
+        node_ids = _FAISS_NODES
         q_vec = encode_text(drug_label).astype(np.float32)
         q_vec = q_vec.reshape(1, -1)
         dists, idxs = index.search(q_vec, mel_top_k)
