@@ -20,7 +20,7 @@
 ### ▶️ Clone the Repo and Set Up Virtual Environment
 
 ```bash
-git clone https://github.com/your-username/drug_ae_reasoner.git
+git clone https://github.com/showman-sharma/drug_ae_reasoner.git
 cd drug_ae_reasoner
 python -m venv venv
 source venv/bin/activate  # or .\venv\Scripts\activate on Windows
@@ -187,6 +187,38 @@ connected, top_paths, fb_drug, fb_ae, verb = find_top_drug_to_input_ae_paths(
 
 print("\n".join(verb))
 ```
+
+## 🔬 Research Features
+
+### Three-Path Classification System
+
+The system includes advanced research capabilities for ADR dataset annotation with three-class path classification:
+
+- **Positive paths** (`score ≥ 0.6`): Strong evidence for drug-AE relationship
+- **Negative paths** (`0 < score < 0.6`): Weak/contradictory evidence  
+- **Random paths** (`score ≤ 0`): Control/baseline paths
+
+Each drug-AE pair generates exactly 3 paths (one per class) with structured output:
+
+```json
+{
+  "drug": "lipitor",
+  "adr": "muscle pain", 
+  "paths": [
+    {
+      "mapped_drug_concept": "lipitor",
+      "mapped_ae_concept": "muscle problems",
+      "oae_nodes": ["muscle problems"],
+      "path_type": "positive",
+      "path_weight": 0.87,
+      "relation": "ADR",
+      "verbalization": "lipitor → muscle problems (OAE) ~ 'muscle pain' [sim(cadec→oae_from)=0.89; sim(oae_to→input)=0.85; score=0.87]"
+    }
+  ]
+}
+```
+
+This enables systematic evaluation of knowledge graph reasoning performance across different evidence strength levels.
 
 ---
 
