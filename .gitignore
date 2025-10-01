@@ -65,6 +65,26 @@ adr_path_stats_dummy_out.json
 check_ibuprofen_cadec.py
 check_paracetamol_cadec.py
 
+# Test and diagnostic scripts (temporary/development files)
+tests/adr_path_stats_3paths.py
+tests/adr_path_stats_dummy.py
+tests/check_paracetamol_cadec_dataset.py
+tests/check_paracetamol_embedding.py
+tests/count_path_types_stats.py
+tests/diagnostic_paracetamol.py
+tests/dummy_mel_check.py
+tests/print_all_cadec_dataset_drugs.py
+tests/print_all_cadec_drugs.py
+tests/print_all_train_conll_drugs.py
+tests/print_cadec_drug_nodes.py
+tests/print_cadec_oae_nodes.py
+
+# Scripts directory (development/temporary scripts)
+scripts/
+
+# GitHub workflows (if not needed)
+.github/
+
 # Build artifacts
 build/
 dist/
