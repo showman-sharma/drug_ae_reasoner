@@ -53,6 +53,36 @@ drug_ae_reasoner/data/cadec/*
 drug_ae_reasoner/data/oae/*
 drug_ae_reasoner/data/rxnorm/*
 drug_ae_reasoner/data/processed/*
+drug_ae_reasoner/data/adr/*.json
+drug_ae_reasoner/data/adr/*.jsonl
+drug_ae_reasoner/data/adr/*.csv
 adr_tac_kg_analysis.ipynb
 data/*
 *.zip
+
+# Generated outputs and test files
+adr_path_stats_dummy_out.json
+check_ibuprofen_cadec.py
+check_paracetamol_cadec.py
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Virtual environments
+.venv/
+venv/
+.env
+
+# Pytest cache
+.pytest_cache/
+
+# OS specific
+Thumbs.db
+*.DS_Store
+
+# Editor temporary files
+*~
+.#*
+\#*#
